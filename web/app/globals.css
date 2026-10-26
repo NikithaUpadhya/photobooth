@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Fonts: "inline" because the values are CSS variables set by next/font at runtime */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-instrument);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Design tokens → become utilities like bg-paper, text-ink, shadow-card, rounded-card */
+@theme {
+  --color-paper: #f4eee3;
+  --color-paper-deep: #ebe2d1;
+  --color-ink: #1f1a17;
+  --color-ink-soft: #6b625a;
+  --color-line: #dacfbd;
+  --color-accent: #c8553d;
+  --color-accent-deep: #a8432e;
+
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.6) inset,
+    0 24px 48px -28px rgb(31 26 23 / 0.45);
+  --radius-card: 1.25rem;
+}
+
+@layer base {
+  body {
+    min-height: 100dvh;
+    background-image: radial-gradient(ellipse at top, #fbf7ef 0%, transparent 60%);
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Film grain: an SVG noise texture laid over the whole page */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.07;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-paper);
+  }
 }
