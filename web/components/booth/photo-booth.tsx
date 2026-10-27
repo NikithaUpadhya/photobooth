@@ -1,31 +1,64 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { useCallback } from "react";
+import { RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCamera } from "@/hooks/use-camera";
+import { SHOTS, usePhotoSession } from "@/hooks/use-photo-session";
+import { captureFrame } from "@/lib/capture-frame";
 import { CameraView } from "./camera-view";
+import { SessionOverlay } from "./session-overlay";
 import { StripPreview } from "./strip-preview";
 
 export function PhotoBooth() {
-  const { videoRef, status, start } = useCamera();
+  const { videoRef, status, start: startCamera } = useCamera();
+
+  const capture = useCallback(
+    () => (videoRef.current ? captureFrame(videoRef.current) : null),
+    [videoRef],
+  );
+
+  const session = usePhotoSession(capture);
+  const cameraReady = status === "ready";
 
   return (
     <main className="grid gap-10 pb-16 lg:grid-cols-[1fr_320px] lg:items-start">
       <section className="rounded-card border border-line bg-paper-deep/60 p-4 shadow-card sm:p-6">
-        <CameraView videoRef={videoRef} status={status} onStart={start} />
+        <CameraView videoRef={videoRef} status={status} onStart={startCamera}>
+          <SessionOverlay
+            phase={session.phase}
+            count={session.count}
+            shotIndex={session.shotIndex}
+            total={SHOTS}
+          />
+        </CameraView>
 
         <div className="mt-5 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
           <p className="font-display text-2xl">
-            Strike a pose — <em>four times.</em>
+            {session.isRunning ? (
+              <>Shot {Math.min(session.shotIndex + 1, SHOTS)} <em>of {SHOTS}</em></>
+            ) : session.phase === "done" ? (
+              <>Lovely. <em>Want another go?</em></>
+            ) : (
+              <>Strike a pose — <em>four times.</em></>
+            )}
           </p>
-          <Button disabled={status !== "ready"}>
-            <Sparkles className="size-4" />
-            Start session
-          </Button>
+
+          {session.phase === "done" ? (
+            <Button variant="ghost" onClick={session.start}>
+              <RotateCcw className="size-4" />
+              Retake all
+            </Button>
+          ) : (
+            <Button disabled={!cameraReady || session.isRunning} onClick={session.start}>
+              <Sparkles className="size-4" />
+              {session.isRunning ? "Shooting…" : "Start session"}
+            </Button>
+          )}
         </div>
       </section>
 
-      <StripPreview />
+      <StripPreview photos={session.photos} total={SHOTS} />
     </main>
   );
 }

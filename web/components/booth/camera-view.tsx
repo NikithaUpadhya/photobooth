@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { RefObject, ReactNode } from "react";
 import { Camera, CameraOff, Loader2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CameraStatus } from "@/hooks/use-camera";
@@ -7,6 +7,7 @@ type Props = {
   videoRef: RefObject<HTMLVideoElement | null>;
   status: CameraStatus;
   onStart: () => void;
+  children?: ReactNode;
 };
 
 const messages: Record<Exclude<CameraStatus, "ready">, { title: string; body: string }> = {
@@ -20,7 +21,7 @@ const messages: Record<Exclude<CameraStatus, "ready">, { title: string; body: st
   error: { title: "Couldn't start the camera", body: "It may be in use by another app." },
 };
 
-export function CameraView({ videoRef, status, onStart }: Props) {
+export function CameraView({ videoRef, status, onStart, children }: Props) {
   const ready = status === "ready";
 
   return (
@@ -30,16 +31,18 @@ export function CameraView({ videoRef, status, onStart }: Props) {
         ref={videoRef}
         playsInline
         muted
-        className={`absolute inset-0 size-full -scale-x-100 object-cover transition-opacity duration-700 ${
-          ready ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 size-full -scale-x-100 object-cover transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"
+          }`}
       />
 
       {ready ? (
-        <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-ink/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/80 backdrop-blur">
-          <span className="size-1.5 animate-pulse rounded-full bg-accent" />
-          Live
-        </span>
+        <>
+          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-ink/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/80 backdrop-blur">
+            <span className="size-1.5 animate-pulse rounded-full bg-accent" />
+            Live
+          </span>
+          {children}
+        </>
       ) : (
         <div className="relative flex max-w-xs flex-col items-center gap-3 px-6 text-center text-paper">
           {status === "requesting" ? (
