@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { composeStrip, type StripOptions } from "@/lib/compose-strip";
 
-type Result = { url: string; blob: Blob };
+type Result = { url: string; blob: Blob; photos: string[] };
 
 export function useComposedStrip(photos: string[], options: StripOptions, enabled: boolean) {
   const [result, setResult] = useState<Result | null>(null);
@@ -15,9 +15,9 @@ export function useComposedStrip(photos: string[], options: StripOptions, enable
       .then((blob) => {
         if (cancelled) return;
         const url = URL.createObjectURL(blob);
-        if (urlRef.current) URL.revokeObjectURL(urlRef.current); 
+        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
         urlRef.current = url;
-        setResult({ url, blob });
+        setResult({ url, blob, photos }); // remember which photos this strip was built from
       })
       .catch(console.error);
 
@@ -33,5 +33,6 @@ export function useComposedStrip(photos: string[], options: StripOptions, enable
     [],
   );
 
-  return enabled ? result : null;
+  // Only return a strip if it was built from *these* photos
+  return enabled && result?.photos === photos ? result : null;
 }

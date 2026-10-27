@@ -8,8 +8,19 @@ type Props = {
   stripUrl?: string | null;
 };
 
+// Printer feed: move, pause, move, pause, drop.
+// Defined outside the component so the object is the same on every render
+// (a new object each render could make Motion restart the animation).
+const PRINT_KEYFRAMES = { y: ["-100%", "-72%", "-72%", "-38%", "-38%", "0%"] };
+const PRINT_TRANSITION = {
+  duration: 2.4,
+  times: [0, 0.2, 0.32, 0.58, 0.7, 1],
+  ease: "easeOut" as const,
+};
+
 export function StripPreview({ photos, total, options, stripUrl }: Props) {
   const dark = isDark(options.frameColor);
+  const allShot = photos.length === total;
 
   return (
     <aside className="flex flex-col items-center lg:sticky lg:top-6">
@@ -17,18 +28,20 @@ export function StripPreview({ photos, total, options, stripUrl }: Props) {
       <div className="relative z-10 h-3 w-full max-w-[260px] rounded-full bg-ink/90 shadow-inner" />
 
       {stripUrl ? (
-        // Final composed PNG
-        <motion.img
-          key="final-strip"
-          src={stripUrl}
-          alt="Your photo strip"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="-mt-1.5 w-[220px] rounded-b-md shadow-card"
-        />
+        // Clip only the TOP edge (the part still inside the printer).
+        // Negative insets on the other sides leave room for the shadow.
+        <div className="-mt-1.5" style={{ clipPath: "inset(0 -60px -80px -60px)" }}>
+          <motion.img
+            key="final-strip"
+            src={stripUrl}
+            alt="Your photo strip"
+            initial={{ y: "-100%" }}
+            animate={PRINT_KEYFRAMES}
+            transition={PRINT_TRANSITION}
+            className="block w-[220px] rounded-b-md shadow-card"
+          />
+        </div>
       ) : (
-        // Live CSS preview, styled with the current options
         <div
           className="-mt-1.5 w-[220px] rounded-b-md px-3 pt-3 shadow-card transition-colors duration-300"
           style={{ backgroundColor: options.frameColor, color: dark ? "#f4eee3" : "#1f1a17" }}
@@ -57,7 +70,6 @@ export function StripPreview({ photos, total, options, stripUrl }: Props) {
             </div>
           ))}
 
-          {/* Footer: caption + date, mirrors the canvas layout */}
           <div className="flex h-12 flex-col items-center justify-center">
             {options.caption.trim() && (
               <span className="max-w-full truncate font-display text-lg italic leading-none">
@@ -74,7 +86,7 @@ export function StripPreview({ photos, total, options, stripUrl }: Props) {
       )}
 
       <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">
-        {photos.length === total ? "Fresh off the press" : "Your strip prints here"}
+        {stripUrl ? "Fresh off the press" : allShot ? "Printing…" : "Your strip prints here"}
       </p>
     </aside>
   );

@@ -5,13 +5,14 @@ import { Download, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCamera } from "@/hooks/use-camera";
 import { useComposedStrip } from "@/hooks/use-composed-strip";
-import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { SHOTS, usePhotoSession } from "@/hooks/use-photo-session";
 import { captureFrame } from "@/lib/capture-frame";
 import { DEFAULT_STRIP, type StripOptions } from "@/lib/compose-strip";
 import { downloadFile } from "@/lib/download";
 import { CameraView } from "./camera-view";
 import { SessionOverlay } from "./session-overlay";
+import { ShotThumbnails } from "./shot-thumbnails";
 import { StripCustomizer } from "./strip-customizer";
 import { StripPreview } from "./strip-preview";
 
@@ -25,6 +26,9 @@ export function PhotoBooth() {
 
   const session = usePhotoSession(capture);
   const cameraReady = status === "ready";
+  const isRetaking = session.retakeIndex !== null;
+  const showThumbnails =
+    session.photos.length === SHOTS && (session.phase === "done" || isRetaking);
 
   const [stripOptions, setStripOptions] = useState<StripOptions>(DEFAULT_STRIP);
   const debouncedOptions = useDebouncedValue(stripOptions, 150);
@@ -46,7 +50,9 @@ export function PhotoBooth() {
 
           <div className="mt-5 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
             <p className="font-display text-2xl">
-              {session.isRunning ? (
+              {isRetaking ? (
+                <>Retaking <em>shot {session.retakeIndex! + 1}</em></>
+              ) : session.isRunning ? (
                 <>Shot {Math.min(session.shotIndex + 1, SHOTS)} <em>of {SHOTS}</em></>
               ) : session.phase === "done" ? (
                 <>Lovely. <em>Want another go?</em></>
@@ -76,9 +82,17 @@ export function PhotoBooth() {
               </Button>
             )}
           </div>
+
+          {showThumbnails && (
+            <ShotThumbnails
+              photos={session.photos}
+              retakeIndex={session.retakeIndex}
+              disabled={session.isRunning}
+              onRetake={session.retake}
+            />
+          )}
         </section>
 
-        {/* Customiser */}
         <StripCustomizer value={stripOptions} onChange={setStripOptions} />
       </div>
 

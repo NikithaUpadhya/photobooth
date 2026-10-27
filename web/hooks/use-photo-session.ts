@@ -13,53 +13,82 @@ export function usePhotoSession(capture: () => string | null) {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [count, setCount] = useState(COUNT_FROM);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [retakeIndex, setRetakeIndex] = useState<number | null>(null);
   const cancelled = useRef(false);
 
-  const start = useCallback(async () => {
-    cancelled.current = false;
-    setPhotos([]);
-
-    for (let shot = 0; shot < SHOTS; shot++) {
-      // 3 … 2 … 1
+  /** One countdown → capture → flash. Returns false if cancelled or capture failed. */
+  const shootOnce = useCallback(
+    async (onPhoto: (photo: string) => void) => {
       setPhase("countdown");
       for (let n = COUNT_FROM; n > 0; n--) {
         setCount(n);
         await sleep(TICK_MS);
-        if (cancelled.current) return;
+        if (cancelled.current) return false;
       }
 
-      // snap!
       const photo = capture();
-      if (!photo) {
-        setPhase("idle");
-        return;
-      }
-      setPhotos((prev) => [...prev, photo]);
+      if (!photo) return false;
+
+      onPhoto(photo); // same tick as setPhase → one render, one flash
       setPhase("flash");
 
       await sleep(AFTER_SHOT_MS);
-      if (cancelled.current) return;
-    }
+      return !cancelled.current;
+    },
+    [capture],
+  );
 
+  /** Full session: 4 shots in a row */
+  const start = useCallback(async () => {
+    cancelled.current = false;
+    setRetakeIndex(null);
+    setPhotos([]);
+
+    for (let shot = 0; shot < SHOTS; shot++) {
+      const ok = await shootOnce((photo) => setPhotos((prev) => [...prev, photo]));
+      if (!ok) {
+        if (!cancelled.current) setPhase("idle"); // capture failed
+        return;
+      }
+    }
     setPhase("done");
-  }, [capture]);
+  }, [shootOnce]);
+
+  /** Redo one shot, keep the others */
+  const retake = useCallback(
+    async (index: number) => {
+      cancelled.current = false;
+      setRetakeIndex(index);
+
+      await shootOnce((photo) =>
+        setPhotos((prev) => prev.map((p, i) => (i === index ? photo : p))),
+      );
+      if (cancelled.current) return;
+
+      setRetakeIndex(null);
+      setPhase("done"); // even if capture failed, the old photo is still there
+    },
+    [shootOnce],
+  );
 
   const reset = useCallback(() => {
     cancelled.current = true;
     setPhotos([]);
+    setRetakeIndex(null);
     setPhase("idle");
   }, []);
 
-  // stop the loop if the component unmounts mid-session
   useEffect(() => () => { cancelled.current = true; }, []);
 
   return {
     phase,
     count,
     photos,
+    retakeIndex,
     shotIndex: photos.length,
     isRunning: phase === "countdown" || phase === "flash",
     start,
+    retake,
     reset,
   };
 }
