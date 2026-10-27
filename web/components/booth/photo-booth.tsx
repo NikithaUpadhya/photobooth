@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback } from "react";
-import { RotateCcw, Sparkles } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Download, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCamera } from "@/hooks/use-camera";
+import { useComposedStrip } from "@/hooks/use-composed-strip";
 import { SHOTS, usePhotoSession } from "@/hooks/use-photo-session";
 import { captureFrame } from "@/lib/capture-frame";
+import { DEFAULT_STRIP, type StripOptions } from "@/lib/compose-strip";
+import { downloadFile } from "@/lib/download";
 import { CameraView } from "./camera-view";
 import { SessionOverlay } from "./session-overlay";
 import { StripPreview } from "./strip-preview";
@@ -20,6 +23,9 @@ export function PhotoBooth() {
 
   const session = usePhotoSession(capture);
   const cameraReady = status === "ready";
+
+  const [stripOptions] = useState<StripOptions>(DEFAULT_STRIP);
+  const strip = useComposedStrip(session.photos, stripOptions, session.phase === "done");
 
   return (
     <main className="grid gap-10 pb-16 lg:grid-cols-[1fr_320px] lg:items-start">
@@ -45,10 +51,19 @@ export function PhotoBooth() {
           </p>
 
           {session.phase === "done" ? (
-            <Button variant="ghost" onClick={session.start}>
-              <RotateCcw className="size-4" />
-              Retake all
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={session.start}>
+                <RotateCcw className="size-4" />
+                Retake all
+              </Button>
+              <Button
+                disabled={!strip}
+                onClick={() => strip && downloadFile(strip.url, `lumiere-${Date.now()}.png`)}
+              >
+                <Download className="size-4" />
+                Download
+              </Button>
+            </div>
           ) : (
             <Button disabled={!cameraReady || session.isRunning} onClick={session.start}>
               <Sparkles className="size-4" />
@@ -58,7 +73,7 @@ export function PhotoBooth() {
         </div>
       </section>
 
-      <StripPreview photos={session.photos} total={SHOTS} />
+      <StripPreview photos={session.photos} total={SHOTS} stripUrl={strip?.url} />
     </main>
   );
 }
