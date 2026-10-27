@@ -32,13 +32,13 @@ function fontFamily(cssVar: string, fallback: string) {
   return value || fallback;
 }
 
-function isDark(hex: string) {
+export function isDark(hex: string) {
   const n = parseInt(hex.replace("#", ""), 16);
   const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
   return 0.299 * r + 0.587 * g + 0.114 * b < 140; // perceived brightness
 }
 
-function formatDate(d: Date) {
+export function formatDate(d: Date) {
   return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
     .format(d)
     .toUpperCase(); // "27 OCT 2026"
