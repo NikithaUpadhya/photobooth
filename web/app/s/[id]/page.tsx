@@ -13,9 +13,9 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const strip = await getStrip(id);
-  if (!strip) return { title: "Strip not found · Lumière" };
+  if (!strip) return { title: "Strip not found · Kimi" };
 
-  const title = strip.caption ? `${strip.caption} · Lumière` : "A Lumière photo strip";
+  const title = strip.caption ? `${strip.caption} · Kimi` : "A Kimi photo strip";
   return {
     title,
     description: "Made in a tiny photobooth that lives in the browser.",

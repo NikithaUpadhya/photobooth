@@ -38,12 +38,12 @@ export function StripPreview({ photos, total, options, stripUrl }: Props) {
             initial={{ y: "-100%" }}
             animate={PRINT_KEYFRAMES}
             transition={PRINT_TRANSITION}
-            className="block w-[220px] rounded-b-md shadow-card"
+            className="block w-[220px] rounded-b-md lg:w-[clamp(150px,calc((100dvh_-_10rem)_*_0.33),220px)] shadow-card"
           />
         </div>
       ) : (
         <div
-          className="-mt-1.5 w-[220px] rounded-b-md px-3 pt-3 shadow-card transition-colors duration-300"
+          className="-mt-1.5 w-[220px] rounded-b-md lg:w-[clamp(150px,calc((100dvh_-_10rem)_*_0.33),220px)] px-3 pt-3 shadow-card transition-colors duration-300"
           style={{ backgroundColor: options.frameColor, color: dark ? "#f4eee3" : "#1f1a17" }}
         >
           {Array.from({ length: total }).map((_, i) => (

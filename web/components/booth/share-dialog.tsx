@@ -31,11 +31,11 @@ export function ShareDialog({ open, url, blob, onClose }: Props) {
 
   async function nativeShare() {
     if (!url) return;
-    const file = blob ? new File([blob], "lumiere-strip.png", { type: "image/png" }) : null;
+    const file = blob ? new File([blob], "kimi-strip.png", { type: "image/png" }) : null;
     const data: ShareData =
       file && navigator.canShare?.({ files: [file] })
-        ? { files: [file], title: "My Lumière strip", url }
-        : { title: "My Lumière strip", url };
+        ? { files: [file], title: "My Kimi strip", url }
+        : { title: "My Kimi strip", url };
     try {
       await navigator.share(data);
     } catch {

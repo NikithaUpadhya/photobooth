@@ -13,7 +13,7 @@ const serif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Lumière Booth",
+  title: "Kimi Booth",
   description: "A tiny photobooth that lives in your browser.",
 };
 
