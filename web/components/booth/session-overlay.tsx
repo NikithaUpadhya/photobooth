@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { SessionPhase } from "@/hooks/use-photo-session";
 
 type Props = {
@@ -9,13 +9,21 @@ type Props = {
 };
 
 export function SessionOverlay({ phase, count, shotIndex, total }: Props) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <>
+      {/* Screen-reader announcements */}
+      <span className="sr-only" aria-live="assertive" aria-atomic="true">
+        {phase === "countdown" ? String(count) : phase === "flash" ? `Shot ${shotIndex} of ${total} taken` : ""}
+      </span>
+
       {/* Big countdown number */}
       <AnimatePresence>
         {phase === "countdown" && (
           <motion.span
             key={`${shotIndex}-${count}`}
+            aria-hidden
             initial={{ opacity: 0, scale: 1.6 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.6 }}
@@ -27,12 +35,12 @@ export function SessionOverlay({ phase, count, shotIndex, total }: Props) {
         )}
       </AnimatePresence>
 
-      {/* White camera flash */}
+      {/* Flash — much softer when the user prefers reduced motion */}
       <AnimatePresence>
         {phase === "flash" && (
           <motion.div
             key={`flash-${shotIndex}`}
-            initial={{ opacity: 1 }}
+            initial={{ opacity: reduceMotion ? 0.35 : 1 }}
             animate={{ opacity: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
@@ -41,7 +49,7 @@ export function SessionOverlay({ phase, count, shotIndex, total }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Shot progress: ● ● ○ ○ */}
+      {/* Progress dots */}
       {phase !== "idle" && (
         <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink/40 px-3 py-2 backdrop-blur">
           {Array.from({ length: total }).map((_, i) => (

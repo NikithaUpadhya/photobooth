@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const sans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -16,10 +17,16 @@ export const metadata: Metadata = {
   description: "A tiny photobooth that lives in your browser.",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#f4eee3", 
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable} ${serif.variable}`}>
-      <body className="bg-paper text-ink font-sans antialiased">{children}</body>
+      <body className="bg-paper text-ink font-sans antialiased">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
