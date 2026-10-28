@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export const SHOTS = 4;
 const COUNT_FROM = 3;
 const TICK_MS = 1000;
 const AFTER_SHOT_MS = 900;
@@ -14,7 +13,11 @@ type Callbacks = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function usePhotoSession(capture: () => string | null, callbacks: Callbacks = {}) {
+export function usePhotoSession(
+  capture: () => string | null,
+  shots: number,
+  callbacks: Callbacks = {},
+) {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [count, setCount] = useState(COUNT_FROM);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -57,7 +60,7 @@ export function usePhotoSession(capture: () => string | null, callbacks: Callbac
     setRetakeIndex(null);
     setPhotos([]);
 
-    for (let shot = 0; shot < SHOTS; shot++) {
+    for (let shot = 0; shot < shots; shot++) {
       const ok = await shootOnce(id, (photo) => setPhotos((prev) => [...prev, photo]));
       if (!ok) {
         if (runId.current === id) setPhase("idle"); // capture failed (not cancelled)
@@ -65,7 +68,7 @@ export function usePhotoSession(capture: () => string | null, callbacks: Callbac
       }
     }
     setPhase("done");
-  }, [shootOnce]);
+  }, [shootOnce, shots]);
 
   const retake = useCallback(
     async (index: number) => {
@@ -88,12 +91,19 @@ export function usePhotoSession(capture: () => string | null, callbacks: Callbac
     runId.current++;
     if (retakeIndex !== null) {
       setRetakeIndex(null);
-      setPhase("done"); // keep the 4 photos you already had
+      setPhase("done"); 
     } else {
       setPhotos([]);
       setPhase("idle");
     }
   }, [retakeIndex]);
+
+  const reset = useCallback(() => {
+    runId.current++;
+    setRetakeIndex(null);
+    setPhotos([]);
+    setPhase("idle");
+  }, []);
 
   useEffect(() => {
     const ref = runId;
@@ -112,5 +122,6 @@ export function usePhotoSession(capture: () => string | null, callbacks: Callbac
     start,
     retake,
     cancel,
+    reset,
   };
 }

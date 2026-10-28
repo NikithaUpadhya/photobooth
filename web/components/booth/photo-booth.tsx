@@ -17,13 +17,16 @@ import { Button } from "@/components/ui/button";
 import { useCamera } from "@/hooks/use-camera";
 import { useComposedStrip } from "@/hooks/use-composed-strip";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
-import { SHOTS, usePhotoSession } from "@/hooks/use-photo-session";
+import { usePhotoSession } from "@/hooks/use-photo-session";
 import { useShareStrip } from "@/hooks/use-share-strip";
 import { captureFrame } from "@/lib/capture-frame";
 import { DEFAULT_STRIP, type StripOptions } from "@/lib/compose-strip";
 import { downloadFile } from "@/lib/download";
+import { filterCss } from "@/lib/filters";
+import { getLayout, isCompatible, LAYOUTS, type LayoutId } from "@/lib/layouts";
 import { playShutter, playTick } from "@/lib/sounds";
 import { CameraView } from "./camera-view";
+import { LayoutPicker } from "./layout-picker";
 import { SessionOverlay } from "./session-overlay";
 import { ShareDialog } from "./share-dialog";
 import { ShotThumbnails } from "./shot-thumbnails";
@@ -32,17 +35,24 @@ import { StripPreview } from "./strip-preview";
 
 type Step = "shoot" | "design";
 
+const TIMES = ["once", "twice", "three times", "four times"];
+
 export function PhotoBooth() {
   const { videoRef, status, start: startCamera } = useCamera();
   const [step, setStep] = useState<Step>("shoot");
   const [muted, setMuted] = useState(false);
 
+  const [stripOptions, setStripOptions] = useState<StripOptions>(DEFAULT_STRIP);
+  const layout = getLayout(stripOptions.layout);
+  const shots = layout.shots;
+  const aspect = layout.photoW / layout.photoH;
+
   const capture = useCallback(
-    () => (videoRef.current ? captureFrame(videoRef.current) : null),
-    [videoRef],
+    () => (videoRef.current ? captureFrame(videoRef.current, { aspect }) : null),
+    [videoRef, aspect],
   );
 
-  const session = usePhotoSession(capture, {
+  const session = usePhotoSession(capture, shots, {
     onTick: (n) => !muted && playTick(n === 1),
     onShutter: () => !muted && playShutter(),
   });
@@ -50,9 +60,13 @@ export function PhotoBooth() {
   const cameraReady = status === "ready";
   const isRetaking = session.retakeIndex !== null;
   const showThumbnails =
-    session.photos.length === SHOTS && (session.phase === "done" || isRetaking);
+    session.photos.length === shots && (session.phase === "done" || isRetaking);
 
-  const [stripOptions, setStripOptions] = useState<StripOptions>(DEFAULT_STRIP);
+  function changeLayout(id: LayoutId) {
+    if (!isCompatible(layout, getLayout(id))) session.reset(); // photos no longer fit
+    setStripOptions((o) => ({ ...o, layout: id }));
+  }
+
   const debouncedOptions = useDebouncedValue(stripOptions, 150);
   const strip = useComposedStrip(session.photos, debouncedOptions, session.phase === "done");
 
@@ -109,12 +123,18 @@ export function PhotoBooth() {
             tabIndex={-1}
             className="rounded-card border border-line bg-paper-deep/60 p-4 shadow-card outline-none sm:p-6"
           >
-            <CameraView videoRef={videoRef} status={status} onStart={startCamera}>
+            <CameraView
+              videoRef={videoRef}
+              status={status}
+              onStart={startCamera}
+              filter={filterCss(stripOptions.filter)}
+              aspect={aspect}
+            >
               <SessionOverlay
                 phase={session.phase}
                 count={session.count}
                 shotIndex={session.shotIndex}
-                total={SHOTS}
+                total={shots}
               />
               <button
                 type="button"
@@ -133,11 +153,13 @@ export function PhotoBooth() {
                   {isRetaking ? (
                     <>Retaking <em>shot {session.retakeIndex! + 1}</em></>
                   ) : session.isRunning ? (
-                    <>Shot {Math.min(session.shotIndex + 1, SHOTS)} <em>of {SHOTS}</em></>
+                    <>Shot {Math.min(session.shotIndex + 1, shots)} <em>of {shots}</em></>
                   ) : session.phase === "done" ? (
-                    <>Lovely. <em>Happy with them?</em></>
+                    <>Lovely. <em>{shots === 1 ? "Happy with it?" : "Happy with them?"}</em></>
+                  ) : shots === 1 ? (
+                    <>Strike a pose — <em>just one.</em></>
                   ) : (
-                    <>Strike a pose — <em>four times.</em></>
+                    <>Strike a pose — <em>{TIMES[shots - 1]}.</em></>
                   )}
                 </p>
                 {cameraReady && (
@@ -170,11 +192,25 @@ export function PhotoBooth() {
               )}
             </div>
 
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">
+                Layout
+              </span>
+              <LayoutPicker
+                layouts={LAYOUTS}
+                value={stripOptions.layout}
+                onChange={changeLayout}
+                disabled={session.isRunning}
+              />
+            </div>
+
             {showThumbnails && (
               <ShotThumbnails
                 photos={session.photos}
                 retakeIndex={session.retakeIndex}
                 disabled={session.isRunning}
+                filter={filterCss(stripOptions.filter)}
+                aspect={aspect}
                 onRetake={session.retake}
               />
             )}
@@ -191,7 +227,12 @@ export function PhotoBooth() {
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             className="flex flex-col gap-6 outline-none"
           >
-            <StripCustomizer value={stripOptions} onChange={setStripOptions} />
+            <StripCustomizer
+              value={stripOptions}
+              onChange={setStripOptions}
+              samplePhoto={session.photos[0]}
+              layoutChoices={LAYOUTS.filter((l) => isCompatible(l, layout))}
+            />
 
             <section className="rounded-card border border-line bg-paper-deep/60 p-4 shadow-card sm:p-6">
               <div className="flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-between">
@@ -231,7 +272,6 @@ export function PhotoBooth() {
 
       <StripPreview
         photos={session.photos}
-        total={SHOTS}
         options={stripOptions}
         stripUrl={strip?.url}
       />

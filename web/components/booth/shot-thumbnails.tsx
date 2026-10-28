@@ -4,10 +4,19 @@ type Props = {
   photos: string[];
   retakeIndex: number | null;
   disabled?: boolean;
+  filter?: string;
+  aspect?: number;
   onRetake: (index: number) => void;
 };
 
-export function ShotThumbnails({ photos, retakeIndex, disabled, onRetake }: Props) {
+export function ShotThumbnails({
+  photos,
+  retakeIndex,
+  disabled,
+  filter,
+  aspect = 4 / 3,
+  onRetake,
+}: Props) {
   return (
     <div className="mt-6">
       <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">
@@ -22,7 +31,8 @@ export function ShotThumbnails({ photos, retakeIndex, disabled, onRetake }: Prop
             disabled={disabled}
             onClick={() => onRetake(i)}
             aria-label={`Retake shot ${i + 1}`}
-            className={`group relative aspect-[4/3] overflow-hidden rounded-lg transition
+            style={{ aspectRatio: aspect }}
+            className={`group relative overflow-hidden rounded-lg transition
               hover:-translate-y-0.5 hover:shadow-card
               focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
               disabled:pointer-events-none
@@ -30,7 +40,7 @@ export function ShotThumbnails({ photos, retakeIndex, disabled, onRetake }: Prop
               ${disabled && retakeIndex !== i ? "opacity-50" : ""}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt="" className="size-full object-cover" />
+            <img src={src} alt="" style={{ filter }} className="size-full object-cover" />
 
             <span className="absolute left-1.5 top-1.5 font-mono text-[9px] text-paper drop-shadow">
               {String(i + 1).padStart(2, "0")}

@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: "Made in a tiny photobooth that lives in the browser.",
     openGraph: {
       title,
-      images: [{ url: strip.imageUrl, width: 1020, height: 3088 }],
+      images: [{ url: strip.imageUrl }],
     },
   };
 }
@@ -48,9 +48,7 @@ export default async function SharedStripPage({ params }: Props) {
         <img
           src={strip.imageUrl}
           alt={strip.caption ? `Photo strip: ${strip.caption}` : "Photo strip"}
-          width={1020}
-          height={3088}
-          className="h-auto w-[240px] -rotate-2 rounded-md shadow-card transition duration-500 hover:rotate-0 sm:w-[280px]"
+          className="h-auto max-h-[70dvh] w-auto max-w-[min(100%,560px)] -rotate-2 rounded-md shadow-card transition duration-500 hover:rotate-0"
         />
 
         <div className="flex flex-wrap justify-center gap-2">
