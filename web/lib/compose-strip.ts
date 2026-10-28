@@ -7,7 +7,7 @@ export type StripOptions = {
 
 export const DEFAULT_STRIP: StripOptions = {
   frameColor: "#ffffff",
-  caption: "Lumière",
+  caption: "Kimi",
   showDate: true,
   rounded: false,
 };

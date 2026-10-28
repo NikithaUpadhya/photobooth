@@ -44,6 +44,6 @@ export class StripsController {
   @Get(':id/download')
   async download(@Param('id') id: string, @Res() res: Response) {
     const path = await this.strips.getFilePath(id);
-    res.download(path, `lumiere-${id}.png`); // sets Content-Disposition: attachment
+    res.download(path, `kimi-${id}.png`);
   }
 }

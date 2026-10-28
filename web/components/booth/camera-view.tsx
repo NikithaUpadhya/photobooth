@@ -25,7 +25,7 @@ export function CameraView({ videoRef, status, onStart, children }: Props) {
   const ready = status === "ready";
 
   return (
-    <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-xl bg-ink">
+    <div className="relative mx-auto grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-xl bg-ink lg:max-w-[max(24rem,calc((100dvh_-_18rem)_*_4/3))]">
       {/* Always rendered so the ref exists before start() runs */}
       <video
         ref={videoRef}
