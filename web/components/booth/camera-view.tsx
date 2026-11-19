@@ -7,6 +7,8 @@ type Props = {
   videoRef: RefObject<HTMLVideoElement | null>;
   status: CameraStatus;
   onStart: () => void;
+  filter?: string;
+  aspect?: number;
   children?: ReactNode;
 };
 
@@ -21,22 +23,37 @@ const messages: Record<Exclude<CameraStatus, "ready">, { title: string; body: st
   error: { title: "Couldn't start the camera", body: "It may be in use by another app." },
 };
 
-export function CameraView({ videoRef, status, onStart, children }: Props) {
+export function CameraView({ videoRef, status, onStart, filter, aspect = 4 / 3, children }: Props) {
   const ready = status === "ready";
+  const cropPercent = Math.max(0, (1 - aspect / (4 / 3)) / 2) * 100;
 
   return (
-    <div className="relative mx-auto grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-xl bg-ink lg:max-w-[max(24rem,calc((100dvh_-_18rem)_*_4/3))]">
-      {/* Always rendered so the ref exists before start() runs */}
+    <div className="relative mx-auto grid aspect-[4/3] w-full place-items-center overflow-hidden rounded-xl bg-ink lg:max-w-[max(24rem,calc((100dvh_-_22rem)_*_4/3))]">
       <video
         ref={videoRef}
         playsInline
         muted
+        style={{ filter }}
         className={`absolute inset-0 size-full -scale-x-100 object-cover transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"
           }`}
       />
 
       {ready ? (
         <>
+          {cropPercent > 0 && (
+            <>
+              <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 border-r border-paper/30 bg-ink/60 transition-[width] duration-300"
+                style={{ width: `${cropPercent}%` }}
+              />
+              <span
+                aria-hidden
+                className="absolute inset-y-0 right-0 border-l border-paper/30 bg-ink/60 transition-[width] duration-300"
+                style={{ width: `${cropPercent}%` }}
+              />
+            </>
+          )}
           <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-ink/40 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/80 backdrop-blur">
             <span className="size-1.5 animate-pulse rounded-full bg-accent" />
             Live

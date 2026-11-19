@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { Check, Pipette } from "lucide-react";
 import { isDark, type StripOptions } from "@/lib/compose-strip";
+import { FILTERS } from "@/lib/filters";
+import type { Layout } from "@/lib/layouts";
+import { LayoutPicker } from "./layout-picker";
 
 const SWATCHES = [
   { name: "Paper", value: "#ffffff" },
@@ -16,9 +19,11 @@ const SWATCHES = [
 type Props = {
   value: StripOptions;
   onChange: (next: StripOptions) => void;
+  samplePhoto?: string;
+  layoutChoices?: readonly Layout[];
 };
 
-export function StripCustomizer({ value, onChange }: Props) {
+export function StripCustomizer({ value, onChange, samplePhoto, layoutChoices = [] }: Props) {
   const set = <K extends keyof StripOptions>(key: K, v: StripOptions[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -32,6 +37,65 @@ export function StripCustomizer({ value, onChange }: Props) {
       </h2>
 
       <div className="mt-5 grid gap-6 sm:grid-cols-2">
+        {/* Photo filter */}
+        <div className="sm:col-span-2">
+          <Field label="Filter">
+            <div
+              role="radiogroup"
+              aria-label="Photo filter"
+              className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 pt-1"
+            >
+              {FILTERS.map((f) => {
+                const active = f.id === value.filter;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => set("filter", f.id)}
+                    className="group flex shrink-0 flex-col items-center gap-1.5 rounded-lg
+                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    <span
+                      className={`block aspect-[4/3] w-20 overflow-hidden rounded-lg border border-ink/15 transition
+                        group-hover:-translate-y-0.5 ${active ? ring : ""}`}
+                    >
+                      {samplePhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={samplePhoto}
+                          alt=""
+                          style={{ filter: f.css }}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          style={{ filter: f.css }}
+                          className="block size-full bg-[linear-gradient(135deg,#f3dd8e,#c8553d_55%,#a7c4dc)]"
+                        />
+                      )}
+                    </span>
+                    <span className={`text-xs ${active ? "text-ink" : "text-ink-soft"}`}>{f.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        </div>
+
+        {layoutChoices.length > 1 && (
+          <div className="sm:col-span-2">
+            <Field label="Layout">
+              <LayoutPicker
+                layouts={layoutChoices}
+                value={value.layout}
+                onChange={(id) => set("layout", id)}
+              />
+            </Field>
+          </div>
+        )}
+
         {/* Frame colour */}
         <Field label="Frame">
           <div role="radiogroup" aria-label="Frame colour" className="flex flex-wrap gap-2">

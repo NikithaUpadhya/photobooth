@@ -4,10 +4,14 @@ type Options = {
   mirror?: boolean;
 };
 
-export function captureFrame(
+export function captureFrame(video: HTMLVideoElement, options: Options = {}): string | null {
+  return drawFrame(video, options)?.toDataURL("image/jpeg", 0.92) ?? null;
+}
+
+export function drawFrame(
   video: HTMLVideoElement,
   { aspect = 4 / 3, maxWidth = 1200, mirror = true }: Options = {},
-): string | null {
+): HTMLCanvasElement | null {
   const vw = video.videoWidth;
   const vh = video.videoHeight;
   if (!vw || !vh) return null; // video not ready yet
@@ -38,7 +42,5 @@ export function captureFrame(
     ctx.scale(-1, 1);
   }
   ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-
-  // 3. Export as an image string
-  return canvas.toDataURL("image/jpeg", 0.92);
+  return canvas;
 }
