@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Download,
+  Film,
   Loader2,
   RotateCcw,
   Share2,
@@ -19,8 +20,8 @@ import { useComposedStrip } from "@/hooks/use-composed-strip";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { usePhotoSession } from "@/hooks/use-photo-session";
 import { useShareStrip } from "@/hooks/use-share-strip";
-import { captureFrame } from "@/lib/capture-frame";
-import { DEFAULT_STRIP, type StripOptions } from "@/lib/compose-strip";
+import { captureFrame, drawFrame } from "@/lib/capture-frame";
+import { composeGif, DEFAULT_STRIP, type StripOptions } from "@/lib/compose-strip";
 import { downloadFile } from "@/lib/download";
 import { filterCss } from "@/lib/filters";
 import { getLayout, isCompatible, LAYOUTS, type LayoutId } from "@/lib/layouts";
@@ -55,6 +56,8 @@ export function PhotoBooth() {
   const session = usePhotoSession(capture, shots, {
     onTick: (n) => !muted && playTick(n === 1),
     onShutter: () => !muted && playShutter(),
+    sampleBurst: () =>
+      videoRef.current ? drawFrame(videoRef.current, { aspect, maxWidth: 400 }) : null,
   });
 
   const cameraReady = status === "ready";
@@ -72,6 +75,25 @@ export function PhotoBooth() {
 
   const sharing = useShareStrip();
   const uploading = sharing.state.status === "uploading";
+
+  const [makingGif, setMakingGif] = useState(false);
+  const [gifError, setGifError] = useState<string | null>(null);
+
+  async function downloadGif() {
+    setMakingGif(true);
+    setGifError(null);
+    try {
+      const blob = await composeGif(session.photos, session.bursts, debouncedOptions);
+      const url = URL.createObjectURL(blob);
+      downloadFile(url, `kimi-${Date.now()}.gif`);
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      console.error(err);
+      setGifError("Couldn't make the GIF. Try again?");
+    } finally {
+      setMakingGif(false);
+    }
+  }
 
   // Move focus to the new step so keyboard/screen-reader users land in the right place
   const boothRef = useRef<HTMLElement>(null);
@@ -251,6 +273,14 @@ export function PhotoBooth() {
                     {uploading ? "Uploading…" : "Share"}
                   </Button>
                   <Button
+                    variant="ghost"
+                    disabled={session.phase !== "done" || makingGif}
+                    onClick={downloadGif}
+                  >
+                    {makingGif ? <Loader2 className="size-4 animate-spin" /> : <Film className="size-4" />}
+                    {makingGif ? "Making GIF…" : "Live GIF"}
+                  </Button>
+                  <Button
                     disabled={!strip}
                     onClick={() => strip && downloadFile(strip.url, `kimi-${Date.now()}.png`)}
                   >
@@ -260,9 +290,9 @@ export function PhotoBooth() {
                 </div>
               </div>
 
-              {sharing.state.status === "error" && (
+              {(sharing.state.status === "error" || gifError) && (
                 <p role="alert" className="mt-3 text-center text-sm text-accent sm:text-right">
-                  {sharing.state.message}
+                  {sharing.state.status === "error" ? sharing.state.message : gifError}
                 </p>
               )}
             </section>

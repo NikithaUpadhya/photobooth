@@ -1,3 +1,4 @@
+import { applyPalette, GIFEncoder, quantize, type Palette } from "gifenc";
 import { filterCss, type FilterId } from "@/lib/filters";
 import { getLayout, layoutSize, PAD, photoRect, RADIUS, type LayoutId } from "@/lib/layouts";
 
@@ -42,26 +43,91 @@ export function formatDate(d: Date) {
     .toUpperCase(); // "27 OCT 2026"
 }
 
-export async function composeStrip(photos: string[], opts: StripOptions): Promise<Blob> {
+type Fonts = { serif: string; mono: string };
+
+async function loadFonts(): Promise<Fonts> {
   const serif = fontFamily("--font-instrument", "Georgia, serif");
   const mono = fontFamily("--font-geist-mono", "monospace");
-  const [images] = await Promise.all([
-    Promise.all(photos.map(loadImage)),
-    document.fonts.load(`italic 72px ${serif}`),
-    document.fonts.load(`24px ${mono}`),
-  ]);
+  await Promise.all([document.fonts.load(`italic 72px ${serif}`), document.fonts.load(`24px ${mono}`)]);
+  return { serif, mono };
+}
 
-  // 2. Size the canvas
-  const layout = getLayout(opts.layout);
-  const { width, height } = layoutSize(layout);
-
+function createContext(width: number, height: number) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("Canvas not supported");
+  return { canvas, ctx };
+}
 
-  // 3. Frame background
+export async function composeStrip(photos: string[], opts: StripOptions): Promise<Blob> {
+  const [images, fonts] = await Promise.all([Promise.all(photos.map(loadImage)), loadFonts()]);
+  const { width, height } = layoutSize(getLayout(opts.layout));
+  const { canvas, ctx } = createContext(width, height);
+
+  drawStrip(ctx, images, opts, fonts);
+
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Export failed"))), "image/png"),
+  );
+}
+
+const GIF_MAX_W = 480;
+const GIF_MAX_H = 1200;
+const GIF_DELAY_MS = 90;
+
+/** Every slot plays its burst forward then backward, on a loop */
+export async function composeGif(
+  photos: string[],
+  bursts: CanvasImageSource[][],
+  opts: StripOptions,
+): Promise<Blob> {
+  const [stills, fonts] = await Promise.all([Promise.all(photos.map(loadImage)), loadFonts()]);
+  const { width, height } = layoutSize(getLayout(opts.layout));
+  const scale = Math.min(GIF_MAX_W / width, GIF_MAX_H / height, 1);
+  const w = Math.round(width * scale);
+  const h = Math.round(height * scale);
+  const { ctx } = createContext(w, h);
+
+  const frames = Math.max(1, ...bursts.map((b) => b.length));
+  const order = [...Array(frames).keys(), ...[...Array(frames).keys()].slice(1, -1).reverse()];
+
+  const gif = GIFEncoder();
+  let palette: Palette | undefined;
+
+  for (const f of order) {
+    const images = stills.map((still, i) => {
+      const burst = bursts[i];
+      return burst?.length ? burst[Math.min(f, burst.length - 1)] : still;
+    });
+
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    drawStrip(ctx, images, opts, fonts);
+
+    const { data } = ctx.getImageData(0, 0, w, h);
+    const first = !palette;
+    palette ??= quantize(data, 256);
+    gif.writeFrame(applyPalette(data, palette), w, h, {
+      delay: GIF_DELAY_MS,
+      ...(first && { palette }),
+    });
+    await new Promise((r) => setTimeout(r, 0)); // keep the UI responsive
+  }
+
+  gif.finish();
+  return new Blob([gif.bytes()], { type: "image/gif" });
+}
+
+function drawStrip(
+  ctx: CanvasRenderingContext2D,
+  images: CanvasImageSource[],
+  opts: StripOptions,
+  { serif, mono }: Fonts,
+) {
+  const layout = getLayout(opts.layout);
+  const { width, height } = layoutSize(layout);
+
   ctx.fillStyle = opts.frameColor;
   ctx.fillRect(0, 0, width, height);
 
@@ -95,9 +161,4 @@ export async function composeStrip(photos: string[], opts: StripOptions): Promis
     ctx.globalAlpha = 1;
     ctx.letterSpacing = "0px";
   }
-
-  // 6. Export as a PNG Blob
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Export failed"))), "image/png"),
-  );
 }
